@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,13 +229,23 @@ async function searchSpotify(query){
   
   searchTimeout=setTimeout(async()=>{
     try{
-      // Get token first
-      const token=await ensureToken();
-      if(!token){resultsEl.style.display='none';return;}
+      let token=await ensureToken();
+      if(!token){resultsEl.innerHTML='<div class="search-results"><div class="search-result"><div class="result-info"><div class="result-title" style="color:#ff3cac">Could not connect to Spotify</div></div></div></div>';resultsEl.style.display='block';return;}
       
-      const r=await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=6`,{
+      let r=await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=6`,{
         headers:{Authorization:`Bearer ${token}`}
       });
+      
+      // If token expired, force refresh and retry
+      if(r.status===401){
+        spotifyToken=null;tokenExpiry=0;
+        token=await ensureToken();
+        if(!token){resultsEl.style.display='none';return;}
+        r=await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=6`,{
+          headers:{Authorization:`Bearer ${token}`}
+        });
+      }
+      
       const data=await r.json();
       const tracks=data.tracks?.items||[];
       
