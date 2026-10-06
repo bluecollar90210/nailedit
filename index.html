@@ -1,0 +1,502 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>NailedIt 🎤</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a0f;color:#fff;font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+.screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+.screen.hidden{display:none;}
+.logo{font-size:clamp(48px,12vw,80px);font-weight:900;letter-spacing:-3px;margin-bottom:8px;}
+.logo span{color:#ff3cac;}
+.tagline{font-size:16px;color:#888;margin-bottom:32px;}
+.player-setup{width:100%;max-width:400px;}
+.player-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+.player-input{flex:1;background:#1a1a2a;border:1.5px solid #333;border-radius:12px;padding:12px 16px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;outline:none;}
+.player-input:focus{border-color:#ff3cac;}
+.player-input::placeholder{color:#555;}
+.section-label{font-size:12px;font-weight:700;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;text-align:left;}
+.btn{font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 32px;border-radius:14px;border:none;cursor:pointer;transition:all 0.18s;width:100%;max-width:400px;}
+.btn-primary{background:linear-gradient(135deg,#ff3cac,#7928ca);color:#fff;}
+.btn-primary:hover{transform:scale(1.02);box-shadow:0 8px 30px rgba(255,60,172,0.4);}
+.btn-primary:active{transform:scale(0.98);}
+.btn-secondary{background:#1a1a2a;border:1.5px solid #333;color:#fff;margin-top:10px;}
+.btn-secondary:hover{border-color:#ff3cac;color:#ff3cac;}
+
+/* Song search */
+.search-wrap{position:relative;margin-bottom:12px;}
+.search-input{width:100%;background:#1a1a2a;border:1.5px solid #333;border-radius:12px;padding:12px 16px 12px 40px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;outline:none;}
+.search-input:focus{border-color:#ff3cac;}
+.search-input::placeholder{color:#555;}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;}
+.search-results{background:#1a1a2a;border:1.5px solid #333;border-radius:12px;overflow:hidden;margin-bottom:12px;max-height:260px;overflow-y:auto;}
+.search-result{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #222;}
+.search-result:last-child{border-bottom:none;}
+.search-result:hover,.search-result.selected{background:#2a1a3a;}
+.result-img{width:44px;height:44px;border-radius:6px;object-fit:cover;background:#333;flex-shrink:0;}
+.result-info{flex:1;text-align:left;min-width:0;}
+.result-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result-artist{font-size:11px;color:#888;}
+.result-preview{font-size:10px;color:#ff3cac;margin-top:2px;}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:220px;overflow-y:auto;margin-bottom:12px;}
+.preset-card{background:#1a1a2a;border:2px solid #333;border-radius:12px;padding:10px;cursor:pointer;transition:all 0.15s;text-align:left;}
+.preset-card:hover,.preset-card.selected{border-color:#ff3cac;background:#2a1a2a;}
+.preset-emoji{font-size:20px;margin-bottom:4px;}
+.preset-title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preset-artist{font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Singing screen */
+.current-singer{font-size:26px;font-weight:800;margin-bottom:4px;}
+.current-song{font-size:15px;color:#ff3cac;margin-bottom:20px;}
+.mic-btn{width:130px;height:130px;border-radius:50%;border:none;font-size:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;margin:0 auto 16px;}
+.mic-btn.idle{background:#1a1a2a;border:3px solid #333;}
+.mic-btn.countdown{background:#2a1a3a;border:3px solid #7928ca;animation:pulse-mic 0.8s ease-in-out infinite;}
+.mic-btn.recording{background:linear-gradient(135deg,#ff3cac,#7928ca);animation:pulse-mic 1s ease-in-out infinite;box-shadow:0 0 40px rgba(255,60,172,0.5);}
+@keyframes pulse-mic{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+.mic-status{font-size:14px;color:#888;margin-bottom:12px;min-height:20px;}
+.timer{font-size:56px;font-weight:900;color:#ff3cac;margin-bottom:4px;min-height:68px;}
+.pitch-viz{display:flex;align-items:flex-end;gap:3px;height:50px;margin:12px auto;justify-content:center;}
+.pitch-bar{width:7px;border-radius:4px;background:#ff3cac;transition:height 0.1s;}
+.music-bar{background:#1a1a2a;border-radius:12px;padding:12px 14px;margin-bottom:14px;border:1px solid #333;display:flex;align-items:center;gap:10px;}
+.music-bar-info{flex:1;text-align:left;min-width:0;}
+.music-bar-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.music-bar-artist{font-size:11px;color:#888;}
+.play-btn{background:linear-gradient(135deg,#ff3cac,#7928ca);border:none;border-radius:8px;color:#fff;font-size:18px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.progress-dots{display:flex;gap:8px;margin-bottom:20px;justify-content:center;}
+.dot{width:10px;height:10px;border-radius:50%;background:#333;}
+.dot.done{background:#ff3cac;}
+.dot.current{background:#fff;}
+
+/* Score screen */
+.score-display{font-size:clamp(80px,22vw,130px);font-weight:900;letter-spacing:-4px;margin-bottom:0;line-height:1;}
+.score-pct{font-size:22px;font-weight:700;color:#888;margin-bottom:6px;}
+.score-label{font-size:20px;font-weight:700;margin-bottom:24px;}
+.verdict{font-size:40px;margin-bottom:6px;}
+
+/* Leaderboard */
+.leaderboard{width:100%;max-width:400px;}
+.lb-row{display:flex;align-items:center;gap:12px;background:#1a1a2a;border-radius:14px;padding:14px 16px;margin-bottom:8px;border:1.5px solid #333;}
+.lb-row.top{border-color:#ffd700;background:linear-gradient(135deg,#2a2000,#1a1500);}
+.lb-rank{font-size:20px;font-weight:900;min-width:28px;}
+.lb-name{flex:1;font-size:15px;font-weight:600;}
+.lb-score{font-size:18px;font-weight:800;color:#ff3cac;}
+.lb-bar-wrap{width:100%;background:#111;border-radius:4px;height:4px;margin-top:4px;}
+.lb-bar{height:4px;border-radius:4px;background:linear-gradient(90deg,#ff3cac,#7928ca);}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="screen" id="screen-home">
+  <div class="logo">Nailed<span>It</span> 🎤</div>
+  <div class="tagline">Who sounds just like the original?</div>
+  <div class="player-setup">
+    <div class="section-label">Who's playing?</div>
+    <div id="players-list">
+      <div class="player-row"><input class="player-input" placeholder="Player 1 name" id="p0"></div>
+      <div class="player-row"><input class="player-input" placeholder="Player 2 name" id="p1"></div>
+    </div>
+    <button onclick="addPlayer()" style="width:100%;background:#1a1a2a;border:1.5px solid #333;border-radius:12px;padding:11px;color:#ff3cac;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:20px;">+ Add Player</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="section-label" style="margin-bottom:0">Pick a song</div>
+      <button onclick="pickRandom()" style="background:linear-gradient(135deg,#ff3cac,#7928ca);border:none;border-radius:10px;color:#fff;font-family:Inter,sans-serif;font-size:12px;font-weight:700;padding:7px 14px;cursor:pointer;">🎲 Random!</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="song-search" placeholder="Search any song..." oninput="searchSpotify(this.value)">
+    </div>
+    <div id="search-results" style="display:none"></div>
+    <div class="section-label" style="margin-top:4px">— or pick a classic —</div>
+    <div class="preset-grid" id="preset-grid"></div>
+    <button class="btn btn-primary" onclick="startGame()">Let's Go! 🎤</button>
+  </div>
+</div>
+
+<!-- SINGING -->
+<div class="screen hidden" id="screen-sing">
+  <div style="width:100%;max-width:400px">
+    <button onclick="newGame()" style="background:none;border:none;color:#555;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px;text-align:left;display:block;">← Back</button>
+    <div class="progress-dots" id="progress-dots"></div>
+    <div style="font-size:12px;color:#555;margin-bottom:20px" id="round-label"></div>
+    <div class="current-singer" id="singer-name"></div>
+    <div class="current-song" id="singer-song"></div>
+    <div class="music-bar" id="music-bar">
+      <div class="music-bar-info">
+        <div class="music-bar-title" id="music-title"></div>
+        <div class="music-bar-artist" id="music-artist"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;width:100%;max-width:400px">
+      <a id="spotify-btn" href="#" target="_blank" style="flex:1;background:#1db954;border-radius:10px;color:#fff;font-family:Inter,sans-serif;font-size:13px;font-weight:700;padding:11px;text-align:center;text-decoration:none;display:block;">🎧 Open in Spotify</a>
+      <a id="youtube-btn" href="#" target="_blank" style="flex:1;background:#ff0000;border-radius:10px;color:#fff;font-family:Inter,sans-serif;font-size:13px;font-weight:700;padding:11px;text-align:center;text-decoration:none;display:block;">▶ YouTube Karaoke</a>
+    </div>
+    <div class="pitch-viz" id="pitch-viz">
+      <div class="pitch-bar" style="height:8px"></div><div class="pitch-bar" style="height:16px"></div>
+      <div class="pitch-bar" style="height:6px"></div><div class="pitch-bar" style="height:28px"></div>
+      <div class="pitch-bar" style="height:12px"></div><div class="pitch-bar" style="height:22px"></div>
+      <div class="pitch-bar" style="height:10px"></div><div class="pitch-bar" style="height:32px"></div>
+      <div class="pitch-bar" style="height:16px"></div><div class="pitch-bar" style="height:20px"></div>
+      <div class="pitch-bar" style="height:38px"></div><div class="pitch-bar" style="height:8px"></div>
+    </div>
+    <div class="timer" id="timer-display"></div>
+    <div class="mic-status" id="mic-status">Play the preview, then tap the mic to sing!</div>
+    <button class="mic-btn idle" id="mic-btn" onclick="toggleRecording()">🎤</button>
+    <button class="btn-secondary" style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;padding:10px 20px;border-radius:10px;border:1.5px solid #333;background:#1a1a2a;color:#888;cursor:pointer;width:100%;max-width:400px;margin-top:8px" onclick="skipSong()">Skip / Pass</button>
+  </div>
+</div>
+
+<!-- SCORE -->
+<div class="screen hidden" id="screen-score">
+  <button onclick="newGame()" style="background:none;border:none;color:#555;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px;align-self:flex-start;">← Back</button>
+  <div class="verdict" id="score-verdict"></div>
+  <div class="score-display" id="score-number">0</div>
+  <div class="score-pct">%</div>
+  <div class="score-label" id="score-label"></div>
+  <div style="font-size:13px;color:#555;margin-bottom:32px" id="score-sub"></div>
+  <button class="btn btn-primary" id="next-btn" onclick="nextPlayer()">Next Player →</button>
+  <button class="btn btn-secondary" onclick="retake()">🔄 Retake</button>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="screen hidden" id="screen-lb">
+  <button onclick="newGame()" style="background:none;border:none;color:#555;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px;align-self:flex-start;">← Back</button>
+  <div style="font-size:40px;margin-bottom:8px">🏆</div>
+  <div style="font-size:28px;font-weight:900;margin-bottom:4px">Final Results</div>
+  <div style="font-size:14px;color:#888;margin-bottom:28px" id="lb-song-label"></div>
+  <div class="leaderboard" id="leaderboard"></div>
+  <button class="btn btn-primary" style="margin-top:24px" onclick="playAgain()">Play Again 🎤</button>
+  <button class="btn btn-secondary" onclick="newGame()">New Game</button>
+</div>
+
+<script>
+const SPOTIFY_CLIENT_ID='cab68b24f5ed48b7aaaf0dd8f8654e10';
+let spotifyToken=null;
+
+const PRESETS=[
+  {emoji:'🎸',title:'Bohemian Rhapsody',artist:'Queen',spotify:'https://open.spotify.com/search/Bohemian%20Rhapsody%20Queen',youtube:'https://www.youtube.com/results?search_query=Bohemian+Rhapsody+karaoke'},
+  {emoji:'💃',title:'Like a Prayer',artist:'Madonna',spotify:'https://open.spotify.com/search/Like%20a%20Prayer%20Madonna',youtube:'https://www.youtube.com/results?search_query=Like+a+Prayer+karaoke'},
+  {emoji:'🕺',title:'Billie Jean',artist:'Michael Jackson',spotify:'https://open.spotify.com/search/Billie%20Jean%20Michael%20Jackson',youtube:'https://www.youtube.com/results?search_query=Billie+Jean+karaoke'},
+  {emoji:'🎵',title:'Sweet Caroline',artist:'Neil Diamond',spotify:'https://open.spotify.com/search/Sweet%20Caroline%20Neil%20Diamond',youtube:'https://www.youtube.com/results?search_query=Sweet+Caroline+karaoke'},
+  {emoji:'🔥',title:"Livin' on a Prayer",artist:'Bon Jovi',spotify:'https://open.spotify.com/search/Livin%20on%20a%20Prayer%20Bon%20Jovi',youtube:'https://www.youtube.com/results?search_query=Livin+on+a+Prayer+karaoke'},
+  {emoji:'💕',title:'My Heart Will Go On',artist:'Celine Dion',spotify:'https://open.spotify.com/search/My%20Heart%20Will%20Go%20On%20Celine%20Dion',youtube:'https://www.youtube.com/results?search_query=My+Heart+Will+Go+On+karaoke'},
+  {emoji:'🎤',title:"Don't Stop Believin'",artist:'Journey',spotify:'https://open.spotify.com/search/Don%27t%20Stop%20Believin%20Journey',youtube:'https://www.youtube.com/results?search_query=Don%27t+Stop+Believin+karaoke'},
+  {emoji:'🌙',title:'Total Eclipse of the Heart',artist:'Bonnie Tyler',spotify:'https://open.spotify.com/search/Total%20Eclipse%20of%20the%20Heart%20Bonnie%20Tyler',youtube:'https://www.youtube.com/results?search_query=Total+Eclipse+of+the+Heart+karaoke'},
+  {emoji:'🎹',title:'Take On Me',artist:'A-ha',spotify:'https://open.spotify.com/search/Take%20On%20Me%20Aha',youtube:'https://www.youtube.com/results?search_query=Take+On+Me+karaoke'},
+  {emoji:'💕',title:'I Will Always Love You',artist:'Whitney Houston',spotify:'https://open.spotify.com/search/I%20Will%20Always%20Love%20You%20Whitney%20Houston',youtube:'https://www.youtube.com/results?search_query=I+Will+Always+Love+You+karaoke'},
+  {emoji:'👯',title:'Wannabe',artist:'Spice Girls',spotify:'https://open.spotify.com/search/Wannabe%20Spice%20Girls',youtube:'https://www.youtube.com/results?search_query=Wannabe+Spice+Girls+karaoke'},
+  {emoji:'🌊',title:'Summer Nights',artist:'Grease Cast',spotify:'https://open.spotify.com/search/Summer%20Nights%20Grease',youtube:'https://www.youtube.com/results?search_query=Summer+Nights+Grease+karaoke'},
+  {emoji:'🌟',title:'Silver Springs',artist:'Fleetwood Mac',spotify:'https://open.spotify.com/search/Silver%20Springs%20Fleetwood%20Mac',youtube:'https://www.youtube.com/results?search_query=Silver+Springs+karaoke'},
+  {emoji:'💙',title:'I Want It That Way',artist:'Backstreet Boys',spotify:'https://open.spotify.com/search/I%20Want%20It%20That%20Way%20Backstreet%20Boys',youtube:'https://www.youtube.com/results?search_query=I+Want+It+That+Way+karaoke'},
+  {emoji:'🎸',title:'Jackson',artist:'Johnny Cash',spotify:'https://open.spotify.com/search/Jackson%20Johnny%20Cash',youtube:'https://www.youtube.com/results?search_query=Jackson+Johnny+Cash+karaoke'},
+  {emoji:'🎄',title:'All I Want for Christmas Is You',artist:'Mariah Carey',spotify:'https://open.spotify.com/search/All%20I%20Want%20for%20Christmas%20Is%20You%20Mariah%20Carey',youtube:'https://www.youtube.com/results?search_query=All+I+Want+for+Christmas+Is+You+karaoke'},
+  {emoji:'🎩',title:'My Way',artist:'Frank Sinatra',spotify:'https://open.spotify.com/search/My%20Way%20Frank%20Sinatra',youtube:'https://www.youtube.com/results?search_query=My+Way+Frank+Sinatra+karaoke'},
+  {emoji:'🪕',title:'Man of Constant Sorrow',artist:'Soggy Bottom Boys',spotify:'https://open.spotify.com/search/Man%20of%20Constant%20Sorrow%20Soggy%20Bottom%20Boys',youtube:'https://www.youtube.com/results?search_query=Man+of+Constant+Sorrow+karaoke'}
+];
+
+let players=[],scores={},currentPlayerIdx=0;
+let selectedSong=null; // {title, artist, previewUrl, emoji}
+let isRecording=false,mediaRecorder=null,audioCtx=null,analyser=null;
+let timerInterval=null,timeLeft=30,pitchInterval=null,pitchSamples=[];
+let previewPlaying=false;
+let searchTimeout=null;
+let playerCount=2;
+
+// Spotify auth - client credentials flow
+async function getSpotifyToken(){
+  if(spotifyToken)return spotifyToken;
+  try{
+    const r=await fetch('https://accounts.spotify.com/api/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`grant_type=client_credentials&client_id=${SPOTIFY_CLIENT_ID}&client_secret=`
+    });
+    // Client credentials needs secret - use implicit grant instead
+    // For now use the token endpoint differently
+    throw new Error('need secret');
+  }catch(e){
+    return null;
+  }
+}
+
+// Search Spotify via proxy-free approach using public search
+async function searchSpotify(query){
+  clearTimeout(searchTimeout);
+  const resultsEl=document.getElementById('search-results');
+  if(!query||query.length<2){resultsEl.style.display='none';return;}
+  
+  searchTimeout=setTimeout(async()=>{
+    try{
+      // Get token first
+      const token=await ensureToken();
+      if(!token){resultsEl.style.display='none';return;}
+      
+      const r=await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=6`,{
+        headers:{Authorization:`Bearer ${token}`}
+      });
+      const data=await r.json();
+      const tracks=data.tracks?.items||[];
+      
+      if(!tracks.length){resultsEl.style.display='none';return;}
+      
+      resultsEl.style.display='block';
+      resultsEl.innerHTML=`<div class="search-results">${tracks.map(t=>`
+        <div class="search-result ${selectedSong?.spotifyId===t.id?'selected':''}" onclick="selectSearchResult('${t.id}','${escJs(t.name)}','${escJs(t.artists[0].name)}','${t.preview_url||''}','${t.album.images[2]?.url||''}')">
+          <img class="result-img" src="${t.album.images[2]?.url||''}" onerror="this.style.background='#333'">
+          <div class="result-info">
+            <div class="result-title">${t.name}</div>
+            <div class="result-artist">${t.artists[0].name}</div>
+            <div class="result-preview">${t.preview_url?'🎵 Preview available':'No preview'}</div>
+          </div>
+        </div>`).join('')}</div>`;
+    }catch(e){resultsEl.style.display='none';}
+  },400);
+}
+
+async function ensureToken(){
+  if(spotifyToken&&tokenExpiry>Date.now())return spotifyToken;
+  try{
+    const r=await fetch('/.netlify/functions/spotify-token');
+    if(!r.ok)return null;
+    const d=await r.json();
+    spotifyToken=d.access_token;
+    tokenExpiry=Date.now()+(d.expires_in-60)*1000;
+    return spotifyToken;
+  }catch(e){return null;}
+}
+let tokenExpiry=0;
+
+function escJs(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'\\"');}
+
+function selectSearchResult(id,title,artist,previewUrl,imgUrl){
+  selectedSong={title,artist,previewUrl,emoji:'🎵',spotifyId:id,imgUrl};
+  document.getElementById('song-search').value=title+' — '+artist;
+  document.getElementById('search-results').style.display='none';
+  // Deselect presets
+  document.querySelectorAll('.preset-card').forEach(c=>c.classList.remove('selected'));
+}
+
+function renderPresets(){
+  const grid=document.getElementById('preset-grid');
+  grid.innerHTML=PRESETS.map((s,i)=>`
+    <div class="preset-card ${selectedSong?.title===s.title&&!selectedSong?.spotifyId?'selected':''}" onclick="selectPreset(${i})">
+      <div class="preset-emoji">${s.emoji}</div>
+      <div class="preset-title">${s.title}</div>
+      <div class="preset-artist">${s.artist}</div>
+    </div>`).join('');
+}
+
+function selectPreset(i){
+  selectedSong={...PRESETS[i]};
+  document.getElementById('song-search').value='';
+  document.getElementById('search-results').style.display='none';
+  renderPresets();
+}
+
+function pickRandom(){
+  const i=Math.floor(Math.random()*PRESETS.length);
+  selectPreset(i);
+}
+
+function addPlayer(){
+  if(playerCount>=6)return;
+  const list=document.getElementById('players-list');
+  const row=document.createElement('div');
+  row.className='player-row';
+  row.innerHTML=`<input class="player-input" placeholder="Player ${playerCount+1} name" id="p${playerCount}">`;
+  list.appendChild(row);
+  playerCount++;
+}
+
+function startGame(){
+  players=[];
+  for(let i=0;i<playerCount;i++){const v=document.getElementById('p'+i)?.value.trim();if(v)players.push(v);}
+  if(players.length<1){alert('Add at least one player!');return;}
+  if(!selectedSong){alert('Pick a song!');return;}
+  scores={};players.forEach(p=>scores[p]=null);
+  currentPlayerIdx=0;
+  showSingScreen();
+}
+
+function showSingScreen(){
+  showScreen('sing');
+  const player=players[currentPlayerIdx];
+  document.getElementById('singer-name').textContent=player+"'s turn";
+  document.getElementById('singer-song').textContent=(selectedSong.emoji||'🎵')+' '+selectedSong.title+' — '+selectedSong.artist;
+  document.getElementById('round-label').textContent=`Round ${currentPlayerIdx+1} of ${players.length}`;
+  document.getElementById('music-title').textContent=selectedSong.title;
+  document.getElementById('music-artist').textContent=selectedSong.artist;
+  
+  const dots=document.getElementById('progress-dots');
+  dots.innerHTML=players.map((_,i)=>`<div class="dot ${i<currentPlayerIdx?'done':i===currentPlayerIdx?'current':''}"></div>`).join('');
+  
+  // Set Spotify and YouTube links
+  const spotifyBtn=document.getElementById('spotify-btn');
+  const youtubeBtn=document.getElementById('youtube-btn');
+  if(spotifyBtn)spotifyBtn.href=selectedSong.spotify||'https://open.spotify.com/search/'+encodeURIComponent(selectedSong.title+' '+selectedSong.artist);
+  if(youtubeBtn)youtubeBtn.href=selectedSong.youtube||'https://www.youtube.com/results?search_query='+encodeURIComponent(selectedSong.title+' '+selectedSong.artist+' karaoke');
+  document.getElementById('mic-status').textContent='Open Spotify or YouTube, play the song, then tap the mic!';
+  resetRecording();
+}
+
+
+
+function resetRecording(){
+  isRecording=false;pitchSamples=[];timeLeft=30;
+  document.getElementById('mic-btn').className='mic-btn idle';
+  document.getElementById('mic-btn').textContent='🎤';
+  document.getElementById('timer-display').textContent='';
+  stopPitchViz();
+}
+
+async function toggleRecording(){
+  if(isRecording){stopRecording();return;}
+  startCountdown();
+}
+
+function startCountdown(){
+  const btn=document.getElementById('mic-btn');
+  const status=document.getElementById('mic-status');
+  btn.className='mic-btn countdown';
+  let count=3;
+  btn.textContent=count;
+  status.textContent='Get ready...';
+  document.getElementById('timer-display').textContent='';
+  const cd=setInterval(async()=>{
+    count--;
+    if(count>0){btn.textContent=count;}
+    else{
+      clearInterval(cd);
+      btn.textContent='🎤';
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+        startRecording(stream);
+      }catch(e){
+        status.textContent='Microphone access needed!';
+        btn.className='mic-btn idle';
+        btn.textContent='🎤';
+      }
+    }
+  },1000);
+}
+
+function startRecording(stream){
+  isRecording=true;pitchSamples=[];timeLeft=30;
+  document.getElementById('mic-btn').className='mic-btn recording';
+  document.getElementById('mic-btn').textContent='⏹';
+  document.getElementById('mic-status').textContent='Sing now! 🎤';
+  document.getElementById('timer-display').textContent=timeLeft;
+
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  analyser=audioCtx.createAnalyser();analyser.fftSize=256;
+  const source=audioCtx.createMediaStreamSource(stream);source.connect(analyser);
+  startPitchViz();
+
+  pitchInterval=setInterval(()=>{
+    const buf=new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(buf);
+    pitchSamples.push(buf.reduce((a,b)=>a+b,0)/buf.length);
+  },100);
+
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    document.getElementById('timer-display').textContent=timeLeft;
+    if(timeLeft<=0)stopRecording(stream);
+  },1000);
+
+  mediaRecorder=new MediaRecorder(stream);
+  mediaRecorder.start();
+}
+
+function stopRecording(){
+  isRecording=false;
+  clearInterval(timerInterval);clearInterval(pitchInterval);
+  stopPitchViz();
+  if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+  if(audioCtx)audioCtx.close();
+  // Stop preview too
+  const audio=document.getElementById('preview-audio');
+  audio.pause();previewPlaying=false;
+  document.getElementById('play-btn').textContent='▶';
+
+  document.getElementById('mic-btn').className='mic-btn idle';
+  document.getElementById('mic-btn').textContent='⏳';
+  document.getElementById('mic-status').textContent='Calculating your score...';
+  document.getElementById('timer-display').textContent='';
+  setTimeout(()=>calculateScore(),1200);
+}
+
+function startPitchViz(){
+  const bars=document.querySelectorAll('.pitch-bar');
+  function update(){
+    if(!analyser)return;
+    const buf=new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(buf);
+    bars.forEach((bar,i)=>{bar.style.height=Math.max(4,buf[i*4]||0/3)+'px';});
+    window._vizFrame=requestAnimationFrame(update);
+  }update();
+}
+function stopPitchViz(){cancelAnimationFrame(window._vizFrame);document.querySelectorAll('.pitch-bar').forEach(b=>b.style.height='8px');}
+
+function calculateScore(){
+  const roll=Math.random();
+  let s;
+  if(roll<0.05)s=Math.floor(Math.random()*8)+2;
+  else if(roll<0.20)s=Math.floor(Math.random()*15)+10;
+  else if(roll<0.45)s=Math.floor(Math.random()*20)+25;
+  else if(roll<0.70)s=Math.floor(Math.random()*20)+45;
+  else if(roll<0.88)s=Math.floor(Math.random()*15)+65;
+  else if(roll<0.97)s=Math.floor(Math.random()*12)+80;
+  else s=Math.floor(Math.random()*7)+93;
+  scores[players[currentPlayerIdx]]=s;
+  showScore(s);
+}
+
+function showScore(score){
+  showScreen('score');
+  let verdict,label,sub;
+  if(score>=93){verdict='🔥';label='LEGENDARY!';sub='Are you sure you are not a professional?';}
+  else if(score>=80){verdict='⭐';label='Nailed It!';sub='The original artist would be proud!';}
+  else if(score>=65){verdict='😎';label='Pretty Good!';sub='Close enough to fool most people.';}
+  else if(score>=45){verdict='😅';label='Not Bad!';sub='We have heard worse. Seriously.';}
+  else if(score>=25){verdict='😬';label='Umm...';sub='Points for confidence at least!';}
+  else if(score>=10){verdict='💀';label='Yikes.';sub='Maybe stick to the shower.';}
+  else{verdict='🫠';label='Bless Your Heart';sub='At least you tried!';}
+  document.getElementById('score-verdict').textContent=verdict;
+  document.getElementById('score-label').textContent=label;
+  document.getElementById('score-sub').textContent=sub;
+  document.getElementById('next-btn').textContent=currentPlayerIdx===players.length-1?'See Results 🏆':'Next Player →';
+  // Animate score
+  let cur=0;const el=document.getElementById('score-number');
+  const step=Math.ceil(score/25);
+  const iv=setInterval(()=>{cur=Math.min(cur+step,score);el.textContent=cur;if(cur>=score)clearInterval(iv);},40);
+}
+
+function nextPlayer(){currentPlayerIdx++;if(currentPlayerIdx>=players.length)showLeaderboard();else showSingScreen();}
+function retake(){showSingScreen();}
+function skipSong(){scores[players[currentPlayerIdx]]=0;showScore(0);}
+
+function showLeaderboard(){
+  showScreen('lb');
+  document.getElementById('lb-song-label').textContent=(selectedSong.emoji||'🎵')+' '+selectedSong.title+' — '+selectedSong.artist;
+  const sorted=Object.entries(scores).filter(([,s])=>s!==null).sort((a,b)=>b[1]-a[1]);
+  const medals=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
+  document.getElementById('leaderboard').innerHTML=sorted.map(([name,score],i)=>`
+    <div class="lb-row ${i===0?'top':''}">
+      <div class="lb-rank">${medals[i]||i+1}</div>
+      <div style="flex:1"><div class="lb-name">${name}</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:${score}%"></div></div></div>
+      <div class="lb-score">${score}%</div>
+    </div>`).join('');
+}
+
+function playAgain(){scores={};players.forEach(p=>scores[p]=null);currentPlayerIdx=0;showSingScreen();}
+function newGame(){selectedSong=null;playerCount=2;document.getElementById('players-list').innerHTML='<div class="player-row"><input class="player-input" placeholder="Player 1 name" id="p0"></div><div class="player-row"><input class="player-input" placeholder="Player 2 name" id="p1"></div>';renderPresets();showScreen('home');}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById('screen-'+id).classList.remove('hidden');}
+
+renderPresets();
+</script>
+</body>
+</html>
