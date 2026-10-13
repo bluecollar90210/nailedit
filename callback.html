@@ -21,34 +21,60 @@
   <div class="sub" id="status">Connecting Spotify...</div>
 </div>
 <script>
-  // This page is the OAuth redirect target.
-  // Spotify sends the token in the URL hash fragment.
-  // We forward everything back to the main app via localStorage, then redirect.
+const CLIENT_ID = 'cab68b24f5ed48b7aaaf0dd8f8654e10';
+const REDIRECT_URI = 'https://nailedittunes.netlify.app/callback.html';
 
-  const hash = window.location.hash;
-  if (hash && hash.includes('access_token')) {
-    const params = new URLSearchParams(hash.slice(1));
-    const token = params.get('access_token');
-    const expiresIn = parseInt(params.get('expires_in') || '3600');
-    const exp = Date.now() + expiresIn * 1000;
+async function handleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
 
-    if (token) {
-      localStorage.setItem('sp_token', token);
-      localStorage.setItem('sp_expiry', String(exp));
-      document.getElementById('status').textContent = 'Spotify connected! Redirecting...';
-      // Go back to the app — it will pick up the token from localStorage
-      setTimeout(() => { window.location.href = '/'; }, 600);
-    } else {
-      document.getElementById('status').textContent = 'Something went wrong. Redirecting...';
-      setTimeout(() => { window.location.href = '/'; }, 1500);
-    }
-  } else if (hash && hash.includes('error')) {
+  if (error || !code) {
     document.getElementById('status').textContent = 'Login cancelled. Redirecting...';
-    setTimeout(() => { window.location.href = '/'; }, 1200);
-  } else {
-    // No hash? Just go home
-    window.location.href = '/';
+    setTimeout(() => window.location.href = '/', 1200);
+    return;
   }
+
+  const verifier = sessionStorage.getItem('sp_verifier');
+  if (!verifier) {
+    document.getElementById('status').textContent = 'Session expired. Try again.';
+    setTimeout(() => window.location.href = '/', 1500);
+    return;
+  }
+
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI,
+        client_id: CLIENT_ID,
+        code_verifier: verifier
+      })
+    });
+
+    const data = await r.json();
+
+    if (data.access_token) {
+      const exp = Date.now() + data.expires_in * 1000;
+      localStorage.setItem('sp_token', data.access_token);
+      localStorage.setItem('sp_expiry', String(exp));
+      if (data.refresh_token) localStorage.setItem('sp_refresh', data.refresh_token);
+      document.getElementById('status').textContent = 'Spotify connected! Redirecting...';
+      setTimeout(() => window.location.href = '/', 600);
+    } else {
+      document.getElementById('status').textContent = 'Could not connect. Try again.';
+      setTimeout(() => window.location.href = '/', 1500);
+    }
+  } catch(e) {
+    document.getElementById('status').textContent = 'Something went wrong. Redirecting...';
+    setTimeout(() => window.location.href = '/', 1500);
+  }
+}
+
+handleCallback();
 </script>
 </body>
 </html>
