@@ -93,7 +93,6 @@ body{background:#0a0a0f;color:#fff;font-family:'Inter',sans-serif;min-height:100
 <div class="screen" id="screen-home">
   <div class="logo">Nailed<span>It</span> 🎤</div>
   <div class="tagline">Who sounds just like the original?</div>
-  <!-- SPOTIFY LOGIN BANNER -->
   <div id="spotify-banner" style="width:100%;max-width:400px;margin-bottom:16px">
     <div id="spb-disconnected" style="background:#1a1a2a;border:1.5px solid #333;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
       <span style="font-size:22px">🎵</span>
@@ -112,7 +111,6 @@ body{background:#0a0a0f;color:#fff;font-family:'Inter',sans-serif;min-height:100
       <button onclick="logoutSpotify()" style="background:none;border:1px solid #444;border-radius:8px;color:#666;font-family:Inter,sans-serif;font-size:10px;padding:4px 8px;cursor:pointer">Disconnect</button>
     </div>
   </div>
-
   <div class="player-setup">
     <div class="section-label">Who's playing?</div>
     <div id="players-list">
@@ -192,7 +190,6 @@ body{background:#0a0a0f;color:#fff;font-family:'Inter',sans-serif;min-height:100
 </div>
 
 <script>
-
 let spotifyToken=null;
 
 const PRESETS=[
@@ -243,9 +240,7 @@ async function searchSpotify(query){
       
       // If token expired, force refresh and retry
       if(r.status===401){
-        // 403 = client credentials blocked. Prompt OAuth login.
-        spotifyToken=null;tokenExpiry=0;
-        localStorage.removeItem('sp_token');localStorage.removeItem('sp_expiry');
+        spotifyToken=null;tokenExpiry=0;localStorage.removeItem('sp_token');localStorage.removeItem('sp_expiry');
         const res2=document.getElementById('search-results');
         res2.style.display='block';
         res2.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:14px;color:#eee;margin-bottom:12px">Connect Spotify to search songs</div><button onclick="loginSpotify()" style="background:#1db954;border:none;border-radius:10px;color:#fff;font-family:Inter,sans-serif;font-size:14px;font-weight:700;padding:12px 24px;cursor:pointer">🎧 Connect Spotify</button></div>';
@@ -275,83 +270,55 @@ async function searchSpotify(query){
   },400);
 }
 
-// ── Spotify OAuth (Implicit Grant) ──────────────────────────────
 const SPOTIFY_CLIENT_ID='cab68b24f5ed48b7aaaf0dd8f8654e10';
-const SPOTIFY_REDIRECT='https://nailedittunes.netlify.app/callback';
-const SPOTIFY_SCOPES='streaming user-read-email user-read-private user-read-playback-state app-remote-control';
+const SPOTIFY_REDIRECT='https://nailedittunes.netlify.app/callback.html';
+const SPOTIFY_SCOPES='streaming user-read-email user-read-private';
 let tokenExpiry=0;
 
-function loginSpotify(){
-  const state=Math.random().toString(36).slice(2,9);
-  sessionStorage.setItem('sp_state',state);
-  const p=new URLSearchParams({
-    client_id:SPOTIFY_CLIENT_ID,
-    response_type:'token',
-    redirect_uri:SPOTIFY_REDIRECT,
-    state,
-    scope:SPOTIFY_SCOPES,
-    show_dialog:'false'
-  });
+async function generatePKCE(){
+  const verifier=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const data=new TextEncoder().encode(verifier);
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  const challenge=btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return {verifier,challenge};
+}
+
+async function loginSpotify(){
+  const {verifier,challenge}=await generatePKCE();
+  sessionStorage.setItem('sp_verifier',verifier);
+  const p=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:'code',redirect_uri:SPOTIFY_REDIRECT,code_challenge_method:'S256',code_challenge:challenge,scope:SPOTIFY_SCOPES});
   window.location.href='https://accounts.spotify.com/authorize?'+p.toString();
 }
 
 function logoutSpotify(){
-  localStorage.removeItem('sp_token');
-  localStorage.removeItem('sp_expiry');
+  localStorage.removeItem('sp_token');localStorage.removeItem('sp_expiry');
   spotifyToken=null;tokenExpiry=0;
   document.getElementById('spb-connected').style.display='none';
   document.getElementById('spb-disconnected').style.display='flex';
 }
 
 async function handleSpotifyCallback(){
-  // Called on page load — check if we're returning from OAuth
-  const hash=window.location.hash;
-  if(hash&&hash.includes('access_token')){
-    const p=new URLSearchParams(hash.slice(1));
-    const token=p.get('access_token');
-    const expiresIn=parseInt(p.get('expires_in')||'3600');
-    const returnedState=p.get('state');
-    if(token){
-      const exp=Date.now()+expiresIn*1000;
-      localStorage.setItem('sp_token',token);
-      localStorage.setItem('sp_expiry',String(exp));
-      spotifyToken=token;tokenExpiry=exp;
-      // Clean up URL
-      history.replaceState(null,'',window.location.pathname+window.location.search);
-      await updateSpotifyBanner(token);
-      return;
-    }
-  }
-  // Check saved token
   const saved=localStorage.getItem('sp_token');
   const exp=parseInt(localStorage.getItem('sp_expiry')||'0');
-  if(saved&&exp>Date.now()){
-    spotifyToken=saved;tokenExpiry=exp;
-    await updateSpotifyBanner(saved);
-  }
+  if(saved&&exp>Date.now()){spotifyToken=saved;tokenExpiry=exp;await updateSpotifyBanner(saved);}
 }
 
 async function updateSpotifyBanner(token){
   try{
     const r=await fetch('https://api.spotify.com/v1/me',{headers:{Authorization:'Bearer '+token}});
-    if(!r.ok)throw new Error('bad token');
+    if(!r.ok)throw new Error();
     const u=await r.json();
     document.getElementById('spb-username').textContent=u.display_name||u.email||'Connected';
     document.getElementById('spb-connected').style.display='flex';
     document.getElementById('spb-disconnected').style.display='none';
-    // Also update search placeholder
-    const inp=document.getElementById('song-search');
-    if(inp)inp.placeholder='Search any song on Spotify...';
   }catch(e){logoutSpotify();}
 }
 
 async function ensureToken(){
-  // Prefer live OAuth token
   const saved=localStorage.getItem('sp_token');
   const exp=parseInt(localStorage.getItem('sp_expiry')||'0');
   if(saved&&exp>Date.now()){spotifyToken=saved;tokenExpiry=exp;return saved;}
   if(spotifyToken&&tokenExpiry>Date.now())return spotifyToken;
-  // Fall back to client credentials (limited but works for some regions)
   try{
     const r=await fetch('/.netlify/functions/spotify-token');
     if(!r.ok)return null;
